@@ -6,35 +6,25 @@ DB_BACKUP=${WVIEW_HOME}/backup
 DB_HOME=/home/cjh/wview
 DATE=`date +%Y-%m-%d`
 DEST_DIR=${DB_BACKUP}/${DATE}
-#mkdir -p ${DEST_DIR}
-
-#for DB in ${DBS}
-#do
-#  for TABLE in `sqlite3 ${DB} ".tables"`
-#  do
-#    sqlite3 ${DB} ".dump" > ${DEST_DIR}/${DB}.dump
-#  done
-#done
-  
-#cd ${DB_BACKUP}
-#tar zfc $WVIEW_TMP/wview-${DATE}.tar.gz ${DATE}
-
-function last_select_date()
-{
-  local last=`ls -1 $WVIEW_HOME/backup | sort | tail -1`
-  echo $last
-}
 
 function select_file_timestamp()
-{
+{ # walk through all select files checking if they are empty ...
+  local db=$1
+  local table=$2
   local file=$1
   local count=`wc -l $file`
-
-  local datestamp=0
-  if [[ ! $count == 0* ]]
-  then 
-    datestamp=`tail -1 $file | awk 'BEGIN {FS=","} {print $1}'`
-  fi
+ 
+  local datestamp=0 
+  for date in `ls -1 $WVIEW_HOME/backup | sort -r` 
+  do
+    local file=$DB_BACKUP/$date/$db/$table.dump
+    if [ -s "$file" ]
+    then
+      datestamp=`tail -1 $file | awk 'BEGIN {FS=","} {print $1}'`
+      break
+    fi
+  done
+  
   echo $datestamp
 }
 
@@ -67,13 +57,10 @@ function select_table()
 
   if [[ $schema == *dateTime* ]]
   then
-    local last_select_date=`last_select_date`
-    local last_select_file=$WVIEW_HOME/backup/$last_select_date/$db/$table.dump
-
     local last_select_datetime=0
     if [ -f $last_select_file ];
     then
-      last_select_datetime=`select_file_timestamp $last_select_file`      
+      last_select_datetime=`select_file_timestamp $db $table`      
     fi
   fi 
   
@@ -90,11 +77,16 @@ function select_db()
   done
 }
 
-for db in $DBS
-do
-  select_db $db
-done
+function backup()
+{
+  for db in $DBS
+  do
+    select_db $db
+  done
 
-cd $DB_BACKUP
-tar zcf $WVIEW_TMP/$DATE.tar.gz $DATE
-/home/cjh/wview/gsutil/gsutil cp $WVIEW_TMP/$DATE.tar.gz gs://cjh-test
+  cd $DB_BACKUP
+  tar zcf $WVIEW_TMP/$DATE.tar.gz $DATE
+  /home/cjh/wview/gsutil/gsutil cp $WVIEW_TMP/$DATE.tar.gz gs://cjh-test
+}
+
+backup
