@@ -1,11 +1,4 @@
 #!/bin/bash
-DBS="hi.db test2.db"
-WVIEW_HOME=/home/cjh/wview
-WVIEW_TMP=$WVIEW_HOME/tmp
-DB_BACKUP=${WVIEW_HOME}/backup
-DB_HOME=/home/cjh/wview
-DATE=`date +%Y-%m-%d`
-DEST_DIR=${DB_BACKUP}/${DATE}
 
 function select_file_timestamp()
 { # walk through all select files checking if they are empty ...
@@ -88,5 +81,15 @@ function backup()
   tar zcf $WVIEW_TMP/$DATE.tar.gz $DATE
   /home/cjh/wview/gsutil/gsutil cp $WVIEW_TMP/$DATE.tar.gz gs://cjh-test
 }
+
+CONFIG_FILE="backup.conf"
+if [[ -O $CONFIG_FILE ]]; then
+    if [[ $(stat --format %a $CONFIG_FILE) == 600 ]]; then
+        . $CONFIG_FILE
+    fi
+else
+  echo "No config file"
+  return
+fi
 
 backup
