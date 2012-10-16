@@ -79,7 +79,7 @@ function backup()
 
   cd $DB_BACKUP
   tar zcf $WVIEW_TMP/$DATE.tar.gz $DATE
-  /home/cjh/wview/gsutil/gsutil cp $WVIEW_TMP/$DATE.tar.gz gs://cjh-test
+  $GSUTIL cp $WVIEW_TMP/$DATE.tar.gz $GS_BACKUP_DIR
 }
 
 CONFIG_FILE="backup.conf"
