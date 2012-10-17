@@ -5,7 +5,6 @@ function select_file_timestamp()
   local db=$1
   local table=$2
   local file=$1
-  local count=`wc -l $file`
  
   local datestamp=0 
   for date in `ls -1 $WVIEW_HOME/backup | sort -r` 
@@ -24,6 +23,7 @@ function select_file_timestamp()
 function select_to_file()
 {
   local db=$1
+  local db_file=$DB_HOME/$db
   local table=$2
   local datetime=$3
   local output_dir=$DB_BACKUP/$DATE/$db
@@ -38,14 +38,15 @@ function select_to_file()
  
   sql+=";" 
 
-  sqlite3  -csv -header $db "$sql" > $output_file
+  sqlite3  -csv -header $db_file "$sql" > $output_file
 }
 
 function select_table()
 {
   local db=$1
+  local db_file=$DB_HOME/$db
   local table=$2
-  local schema=`sqlite3 $db ".schema $table"`
+  local schema=`sqlite3 $db_file ".schema $table"`
   local last_select_datetime=0
 
   if [[ $schema == *dateTime* ]]
@@ -63,8 +64,9 @@ function select_table()
 function select_db()
 {
   local db=$1
+  local db_file=$DB_HOME/$db
   
-  for table in `sqlite3 ${db} ".tables"`
+  for table in `sqlite3 ${db_file} ".tables"`
   do
     select_table $db $table  
   done
@@ -72,6 +74,7 @@ function select_db()
 
 function backup()
 {
+  date
   for db in $DBS
   do
     select_db $db
