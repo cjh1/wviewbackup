@@ -1,5 +1,16 @@
 #!/bin/bash
 
+function check_exit_code
+{
+  local exit_code = $?
+
+  if [ $exit_code -ne 0 ]; then
+    local cmd = `history | grep -v history | tail -1'
+    printf "Error executing command '%s' exit code: %d" $cmd $exit_code
+    exit $exit_code
+  fi
+}
+
 function select_file_timestamp()
 { # walk through all select files checking if they are empty ...
   local db=$1
@@ -13,10 +24,11 @@ function select_file_timestamp()
     if [ -s "$file" ]
     then
       datestamp=`tail -1 $file | awk 'BEGIN {FS=","} {print $1}'`
+      check_exit_code
       break
     fi
   done
-  
+
   echo $datestamp
 }
 
@@ -28,8 +40,10 @@ function select_to_file()
   local datetime=$3
   local output_dir=$DB_BACKUP/$DATE/$db
   local output_file=$output_dir/$table.dump
-  
+
   mkdir -p $output_dir
+  check_exit_code
+
   sql="select * from $table"
   if [[ ! $datetime == "0" ]]
   then
@@ -39,6 +53,7 @@ function select_to_file()
   sql+=";" 
 
   sqlite3  -csv -header $db_file "$sql" > $output_file
+  check_exit_code
 }
 
 function select_table()
@@ -47,6 +62,7 @@ function select_table()
   local db_file=$DB_HOME/$db
   local table=$2
   local schema=`sqlite3 $db_file ".schema $table"`
+  check_exit_code
   local last_select_datetime=0
 
   if [[ $schema == *dateTime* ]]
@@ -66,7 +82,9 @@ function select_db()
   local db=$1
   local db_file=$DB_HOME/$db
   
-  for table in `sqlite3 ${db_file} ".tables"`
+  local tmp = `sqlite3 ${db_file} ".tables"`
+  check_exit_code
+  for table in $tmp
   do
     select_table $db $table  
   done
@@ -81,8 +99,11 @@ function backup()
   done
 
   cd $DB_BACKUP
+  check_exit_code
   tar zcf $WVIEW_TMP/$DATE.tar.gz $DATE
+  check_exit_code
   $GSUTIL cp $WVIEW_TMP/$DATE.tar.gz $GS_BACKUP_DIR
+  check_exit_code
 }
 
 CONFIG_FILE="backup.conf"
@@ -91,11 +112,11 @@ if [[ -O $CONFIG_FILE ]]; then
         . $CONFIG_FILE
     else
       echo "Config file does not have the correct permissions"
-      exit 0
+      exit -1
     fi
 else
   echo "No config file"
-  exit 0
+  exit -1
 fi
 
 backup
