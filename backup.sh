@@ -5,7 +5,7 @@ function check_exit_code
   local exit_code = $?
 
   if [ $exit_code -ne 0 ]; then
-    local cmd = `history | grep -v history | tail -1'
+    local cmd = `history | grep -v history | cut -b 8- |tail -1'
     printf "Error executing command '%s' exit code: %d" $cmd $exit_code
     exit $exit_code
   fi
