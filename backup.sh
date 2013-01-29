@@ -2,7 +2,7 @@
 
 function check_exit_code
 {
-  local exit_code = $?
+  local exit_code=$?
 
   if [ $exit_code -ne 0 ]; then
     local cmd = `history | grep -v history | cut -b 8- | tail -1`
@@ -82,7 +82,7 @@ function select_db()
   local db=$1
   local db_file=$DB_HOME/$db
   
-  local tmp = `sqlite3 ${db_file} ".tables"`
+  local tmp=`sqlite3 ${db_file} ".tables"`
   check_exit_code
   for table in $tmp
   do
