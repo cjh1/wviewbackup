@@ -1,12 +1,16 @@
 #!/bin/bash
 
+SCRIPT=`basename $0`
+
 function check_exit_code
 {
   local exit_code=$?
+  local check_line=$1
+  local cmd_line_num=$((check_line-1))
 
   if [ $exit_code -ne 0 ]; then
-    local cmd = `history | grep -v history | cut -b 8- | tail -1`
-    printf "Error executing command '%s' exit code: %d" $cmd $exit_code
+    line=`sed "$((cmd_line_num))q;d" $SCRIPT | sed -e 's/^ *//g;s/ *$//g'`
+    echo "Error at line $cmd_line_num: '$line' exit code: $exit_code"
     exit $exit_code
   fi
 }
@@ -24,7 +28,7 @@ function select_file_timestamp()
     if [ -s "$file" ]
     then
       datestamp=`tail -1 $file | awk 'BEGIN {FS=","} {print $1}'`
-      check_exit_code
+      check_exit_code $LINENO
       break
     fi
   done
@@ -42,7 +46,7 @@ function select_to_file()
   local output_file=$output_dir/$table.dump
 
   mkdir -p $output_dir
-  check_exit_code
+  check_exit_code $LINENO
 
   sql="select * from $table"
   if [[ ! $datetime == "0" ]]
@@ -53,7 +57,7 @@ function select_to_file()
   sql+=";" 
 
   sqlite3  -csv -header $db_file "$sql" > $output_file
-  check_exit_code
+  check_exit_code $LINENO
 }
 
 function select_table()
@@ -62,7 +66,7 @@ function select_table()
   local db_file=$DB_HOME/$db
   local table=$2
   local schema=`sqlite3 $db_file ".schema $table"`
-  check_exit_code
+  check_exit_code $LINENO
   local last_select_datetime=0
 
   if [[ $schema == *dateTime* ]]
@@ -83,7 +87,7 @@ function select_db()
   local db_file=$DB_HOME/$db
   
   local tmp=`sqlite3 ${db_file} ".tables"`
-  check_exit_code
+  check_exit_code $LINENO
   for table in $tmp
   do
     select_table $db $table  
@@ -99,14 +103,13 @@ function backup()
   done
 
   cd $DB_BACKUP
-  check_exit_code
+  check_exit_code $LINENO
   tar zcf $WVIEW_TMP/$DATE.tar.gz $DATE
-  check_exit_code
+  check_exit_code $LINENO
   $GSUTIL cp $WVIEW_TMP/$DATE.tar.gz $GS_BACKUP_DIR
-  check_exit_code
+  check_exit_code $LINENO
 }
 
 CONFIG_FILE="backup.conf"
 source configure.sh $CONFIG_FILE
-
 backup
